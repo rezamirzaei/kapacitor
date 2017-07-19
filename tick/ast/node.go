@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/influxdb/influxql"
+	client "github.com/influxdata/kapacitor/client/v1"
 )
 
 // Indent string for formatted TICKscripts
@@ -359,6 +360,51 @@ func (n *BinaryNode) Equal(o interface{}) bool {
 			n.Right.Equal(on.Right)
 	}
 	return false
+}
+
+type DBRPNode struct {
+	position
+	Comment *CommentNode
+	DB      *IdentifierNode
+	RP      *IdentifierNode
+}
+
+func newDBRP(p position, db, rp *IdentifierNode, c *CommentNode) *DBRPNode {
+	return &DBRPNode{
+		position: p,
+		DB:       db,
+		RP:       rp,
+		Comment:  c,
+	}
+}
+
+// TODO: Use Better typing eventually
+func (d *DBRPNode) DBRP() string {
+	return d.DB.Ident + "." + d.RP.Ident
+}
+
+func (d *DBRPNode) Equal(o interface{}) bool {
+	if on, ok := o.(*DBRPNode); ok {
+		return d.DB.Equal(on.DB) && d.RP.Equal(on.RP)
+	}
+
+	return false
+}
+
+func (s *DBRPNode) Format(buf *bytes.Buffer, indent string, onNewLine bool) {
+	if s.Comment != nil {
+		s.Comment.Format(buf, indent, onNewLine)
+	}
+	buf.WriteString(indent)
+	buf.WriteString(TokenDBRP.String())
+	buf.WriteByte(' ')
+	buf.WriteString(s.DB.Ident)
+	buf.WriteString(TokenDot.String())
+	buf.WriteString(s.RP.Ident)
+}
+
+func (n *DBRPNode) String() string {
+	return fmt.Sprintf("DBRPNode@%v{%v %v}%v", n.position, n.DB, n.RP, n.Comment)
 }
 
 type DeclarationNode struct {
@@ -979,6 +1025,84 @@ func newProgram(p position) *ProgramNode {
 	return &ProgramNode{
 		position: p,
 	}
+}
+
+// TODO: Not sure how I feel about client.TaskType importing from client
+func (n *ProgramNode) DBRPs() []client.DBRP {
+	dbrps := []client.DBRP{}
+	for _, nn := range n.Nodes {
+		switch nn.(type) {
+		case *DBRPNode:
+			dbrpn := nn.(*DBRPNode)
+			dbrpc := client.DBRP{
+				Database:        dbrpn.DB.Ident,
+				RetentionPolicy: dbrpn.RP.Ident,
+			}
+			dbrps = append(dbrps, dbrpc)
+		default:
+			continue
+		}
+	}
+
+	return dbrps
+}
+
+// TODO: better type here
+// TODO: add tests
+// TODO: Not sure how I feel about client.TaskType importing from client
+func (n *ProgramNode) TaskType() client.TaskType {
+	tts := []string{}
+	for _, nn := range n.Nodes {
+		switch nn.(type) {
+		case *DeclarationNode:
+			if cn, ok := nn.(*DeclarationNode).Right.(*ChainNode); ok {
+				// TODO: dont repeat logic
+				var n = cn.Left
+			Loop1:
+				for {
+					switch n.(type) {
+					case *ChainNode:
+						n = n.(*ChainNode).Left
+					case *IdentifierNode:
+						if ident := n.(*IdentifierNode).Ident; ident == "batch" || ident == "stream" {
+							tts = append(tts, ident)
+						}
+						break Loop1
+					}
+				}
+			}
+		case *ChainNode:
+			var n = nn.(*ChainNode).Left
+		Loop2:
+			for {
+				switch n.(type) {
+				case *ChainNode:
+					n = n.(*ChainNode).Left
+				case *IdentifierNode:
+					if ident := n.(*IdentifierNode).Ident; ident == "batch" || ident == "stream" {
+						tts = append(tts, ident)
+					}
+					break Loop2
+				}
+			}
+		}
+	}
+
+	t := tts[0]
+	for _, tt := range tts[1:] {
+		if t != tt {
+			return client.InvalidTask
+		}
+	}
+
+	switch t {
+	case "batch":
+		return client.BatchTask
+	case "stream":
+		return client.StreamTask
+	}
+
+	return client.InvalidTask
 }
 
 func (n *ProgramNode) Add(node Node) {
