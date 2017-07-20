@@ -542,6 +542,7 @@ var (
 	dtype       = defineFlags.String("type", "", "The task type (stream|batch)")
 	dtemplate   = defineFlags.String("template", "", "Optional template ID")
 	dvars       = defineFlags.String("vars", "", "Optional path to a JSON vars file")
+	dfile       = defineFlags.String("file", "", "Optional path to a YAML or JSON vars file")
 	dnoReload   = defineFlags.Bool("no-reload", false, "Do not reload the task even if it is enabled")
 	ddbrp       = make(dbrps, 0)
 )
@@ -687,11 +688,37 @@ func doDefine(args []string) error {
 		}
 	}
 
+	fileVars := TaskVars{}
+	if *dfile != "" {
+		f, err := os.Open(*dfile)
+		if err != nil {
+			return errors.Wrapf(err, "faild to open file %s", *dfile)
+		}
+		data, err := ioutil.ReadAll(f)
+		if err != nil {
+			return errors.Wrapf(err, "failed to read task vars file %q", *dfile)
+		}
+		defer f.Close()
+		switch ext := path.Ext(*dfile); ext {
+		case ".yaml", ".yml":
+			if err := yaml.Unmarshal(data, &fileVars); err != nil {
+				return errors.Wrapf(err, "failed to unmarshal yaml task vars file %q", *dfile)
+			}
+		case ".json":
+			if err := json.Unmarshal(data, &fileVars); err != nil {
+				return errors.Wrapf(err, "failed to unmarshal json task vars file %q", *dfile)
+			}
+		default:
+			return errors.New("bad file extension. Must be YAML or JSON")
+
+		}
+	}
+
 	l := cli.TaskLink(id)
 	task, _ := cli.Task(l, nil)
 	var err error
 	if task.ID == "" {
-		_, err = cli.CreateTask(client.CreateTaskOptions{
+		o := client.CreateTaskOptions{
 			ID:         id,
 			TemplateID: *dtemplate,
 			Type:       ttype,
@@ -699,17 +726,31 @@ func doDefine(args []string) error {
 			TICKscript: script,
 			Vars:       vars,
 			Status:     client.Disabled,
-		})
+		}
+		if *dfile != "" {
+			o, err = fileVars.CreateTaskOptions()
+			if err != nil {
+				return err
+			}
+		}
+		_, err = cli.CreateTask(o)
 	} else {
+		o := client.UpdateTaskOptions{
+			TemplateID: *dtemplate,
+			Type:       ttype,
+			DBRPs:      ddbrp,
+			TICKscript: script,
+			Vars:       vars,
+		}
+		if *dfile != "" {
+			o, err = fileVars.UpdateTaskOptions()
+			if err != nil {
+				return err
+			}
+		}
 		_, err = cli.UpdateTask(
 			l,
-			client.UpdateTaskOptions{
-				TemplateID: *dtemplate,
-				Type:       ttype,
-				DBRPs:      ddbrp,
-				TICKscript: script,
-				Vars:       vars,
-			},
+			o,
 		)
 	}
 	if err != nil {
@@ -2245,4 +2286,49 @@ func doBackup(args []string) error {
 		return fmt.Errorf("failed to download entire backup, only wrote %d bytes out of a total %d bytes.", n, size)
 	}
 	return nil
+}
+
+type TaskVars struct {
+	ID         string      `json:"id,omitempty" yaml:"id"`
+	TemplateID string      `json:"template-id,omitempty" yaml:"template-id"`
+	DBRPs      []string    `json:"dbrps,omitempty" yaml:"dbrps"`
+	Vars       client.Vars `json:"vars,omitempty" yamls:"vars"`
+}
+
+func (t TaskVars) CreateTaskOptions() (client.CreateTaskOptions, error) {
+	ds := dbrps{}
+	o := client.CreateTaskOptions{
+		ID:         t.ID,
+		TemplateID: t.TemplateID,
+		Vars:       t.Vars,
+	}
+
+	for _, dbrp := range t.DBRPs {
+		if err := ds.Set(dbrp); err != nil {
+			return o, err
+		}
+	}
+
+	o.DBRPs = ds
+
+	return o, nil
+}
+
+func (t TaskVars) UpdateTaskOptions() (client.UpdateTaskOptions, error) {
+	ds := dbrps{}
+	o := client.UpdateTaskOptions{
+		ID:         t.ID,
+		TemplateID: t.TemplateID,
+		Vars:       t.Vars,
+	}
+
+	for _, dbrp := range t.DBRPs {
+		if err := ds.Set(dbrp); err != nil {
+			return o, err
+		}
+	}
+
+	o.DBRPs = ds
+
+	return o, nil
 }

@@ -735,13 +735,13 @@ func (c *Client) StorageLink(name string) Link {
 }
 
 type CreateTaskOptions struct {
-	ID         string     `json:"id,omitempty"`
-	TemplateID string     `json:"template-id,omitempty"`
+	ID         string     `json:"id,omitempty" yaml:"id"`
+	TemplateID string     `json:"template-id,omitempty" yaml:"template-id"`
 	Type       TaskType   `json:"type,omitempty"`
-	DBRPs      []DBRP     `json:"dbrps,omitempty"`
+	DBRPs      []DBRP     `json:"dbrps,omitempty" yaml:"dbrps"`
 	TICKscript string     `json:"script,omitempty"`
 	Status     TaskStatus `json:"status,omitempty"`
-	Vars       Vars       `json:"vars,omitempty"`
+	Vars       Vars       `json:"vars,omitempty" yamls:"vars"`
 }
 
 // Create a new task.
@@ -769,13 +769,13 @@ func (c *Client) CreateTask(opt CreateTaskOptions) (Task, error) {
 }
 
 type UpdateTaskOptions struct {
-	ID         string     `json:"id,omitempty"`
-	TemplateID string     `json:"template-id,omitempty"`
+	ID         string     `json:"id,omitempty" yaml:"id"`
+	TemplateID string     `json:"template-id,omitempty" yaml:"template-id"`
 	Type       TaskType   `json:"type,omitempty"`
-	DBRPs      []DBRP     `json:"dbrps,omitempty"`
+	DBRPs      []DBRP     `json:"dbrps,omitempty" yaml:"dbrps"`
 	TICKscript string     `json:"script,omitempty"`
 	Status     TaskStatus `json:"status,omitempty"`
-	Vars       Vars       `json:"vars,omitempty"`
+	Vars       Vars       `json:"vars,omitempty" yamls:"vars"`
 }
 
 // Update an existing task.
