@@ -177,28 +177,6 @@ type DBRP struct {
 	RetentionPolicy string
 }
 
-func (d DBRP) Equal(b DBRP) bool {
-	return d.Database == b.Database && d.RetentionPolicy == b.RetentionPolicy
-}
-
-func EqualAsSets(ds, bs []DBRP) bool {
-	if len(ds) != len(bs) {
-		return false
-	}
-	s := map[DBRP]bool{}
-
-	for _, d := range ds {
-		s[d] = true
-	}
-	for _, b := range bs {
-		if !s[b] {
-			return false
-		}
-	}
-
-	return true
-}
-
 type Snapshot struct {
 	NodeSnapshots map[string][]byte
 }

@@ -771,19 +771,9 @@ func (ts *Service) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 
 	// Check for parity between tickscript and dbrp
 
-	// TODO: Pull out this logic into a function
-	p, err := ast.Parse(newTask.TICKscript)
-
-	// Technically this should never happen since we have previously validated the task
+	pn, err := ast.NewProgramNodeFromTickscript(newTask.TICKscript)
 	if err != nil {
-		httpd.HttpError(w, "invalid TICKscript: "+err.Error(), true, http.StatusBadRequest)
-		return
-	}
-
-	pn, ok := p.(*ast.ProgramNode)
-	// This should never happen
-	if !ok {
-		httpd.HttpError(w, "invalid TICKscript", true, http.StatusBadRequest)
+		httpd.HttpError(w, err.Error(), true, http.StatusBadRequest)
 		return
 	}
 
@@ -919,19 +909,9 @@ func (ts *Service) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// TODO: Pull out this logic into a function
-	p, err := ast.Parse(updated.TICKscript)
-
-	// Technically this should never happen since we have previously validated the task
+	pn, err := ast.NewProgramNodeFromTickscript(updated.TICKscript)
 	if err != nil {
-		httpd.HttpError(w, "invalid TICKscript: "+err.Error(), true, http.StatusBadRequest)
-		return
-	}
-
-	pn, ok := p.(*ast.ProgramNode)
-	// This should never happen
-	if !ok {
-		httpd.HttpError(w, "invalid TICKscript", true, http.StatusBadRequest)
+		httpd.HttpError(w, err.Error(), true, http.StatusBadRequest)
 		return
 	}
 
@@ -1667,14 +1647,20 @@ func (ts *Service) handleCreateTemplate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Set template type
-	switch template.Type {
+	pn, err := ast.NewProgramNodeFromTickscript(template.TICKscript)
+	if err != nil {
+		httpd.HttpError(w, err.Error(), true, http.StatusBadRequest)
+		return
+	}
+
+	// set task type from tickscript
+	switch tt := pn.TaskType(); tt {
 	case client.StreamTask:
 		newTemplate.Type = StreamTask
 	case client.BatchTask:
 		newTemplate.Type = BatchTask
 	default:
-		httpd.HttpError(w, fmt.Sprintf("unknown type %q", template.Type), true, http.StatusBadRequest)
+		httpd.HttpError(w, fmt.Sprintf("invalid task type: %v", tt), true, http.StatusBadRequest)
 		return
 	}
 
@@ -1855,9 +1841,35 @@ func (ts *Service) updateAllAssociatedTasks(old, new Template, taskIds []string)
 				return fmt.Errorf("error updating task association %s: %s", taskId, err)
 			}
 		}
+
 		task.TemplateID = new.ID
 		task.TICKscript = new.TICKscript
 		task.Type = new.Type
+
+		oldPn, err := ast.NewProgramNodeFromTickscript(old.TICKscript)
+		if err != nil {
+			// TODO: better error
+			return fmt.Errorf("failed to parse old tickscript: %v", err)
+		}
+
+		newPn, err := ast.NewProgramNodeFromTickscript(new.TICKscript)
+		if err != nil {
+			// TODO: better error
+			return fmt.Errorf("failed to parse new tickscript: %v", err)
+		}
+
+		if len(oldPn.DBRPs()) > 0 || len(newPn.DBRPs()) > 0 {
+
+			task.DBRPs = []DBRP{}
+			for _, dbrp := range newPn.DBRPs() {
+				task.DBRPs = append(task.DBRPs, DBRP{
+					Database:        dbrp.Database,
+					RetentionPolicy: dbrp.RetentionPolicy,
+				})
+
+			}
+		}
+
 		if err := ts.tasks.Replace(task); err != nil {
 			return fmt.Errorf("error updating associated task %s: %s", taskId, err)
 		}

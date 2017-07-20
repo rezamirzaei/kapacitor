@@ -1027,6 +1027,22 @@ func newProgram(p position) *ProgramNode {
 	}
 }
 
+func NewProgramNodeFromTickscript(tickscript string) (*ProgramNode, error) {
+	p, err := Parse(tickscript)
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid TICKscript: %v", err)
+	}
+
+	pn, ok := p.(*ProgramNode)
+	// This should never happen
+	if !ok {
+		return nil, errors.New("invalid TICKscript")
+	}
+
+	return pn, nil
+}
+
 // TODO: Not sure how I feel about client.TaskType importing from client
 func (n *ProgramNode) DBRPs() []client.DBRP {
 	dbrps := []client.DBRP{}
