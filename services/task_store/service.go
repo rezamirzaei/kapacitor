@@ -737,11 +737,6 @@ func (ts *Service) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 			RetentionPolicy: dbrp.RetentionPolicy,
 		}
 	}
-	// TODO: check this condition elsewhere
-	//if len(newTask.DBRPs) == 0 {
-	//	httpd.HttpError(w, fmt.Sprintf("must provide at least one database and retention policy."), true, http.StatusBadRequest)
-	//	return
-	//}
 
 	// Set status
 	switch task.Status {
@@ -811,21 +806,19 @@ func (ts *Service) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: clean up logic here
 	if len(dbrps) == 0 && len(newTask.DBRPs) == 0 {
-		httpd.HttpError(w, "must specify at least one dbrp", true, http.StatusBadRequest)
+		// TODO:better error
+		httpd.HttpError(w, "must specify dbrp", true, http.StatusBadRequest)
 		return
 	}
 
-	if len(dbrps) != 0 && len(newTask.DBRPs) == 0 {
+	if len(dbrps) > 0 && len(newTask.DBRPs) > 0 {
+		// TODO: better error
+		httpd.HttpError(w, "cannot specify dbrp in both places", true, http.StatusBadRequest)
+		return
+	}
+
+	if len(dbrps) != 0 {
 		newTask.DBRPs = dbrps
-	}
-
-	if len(dbrps) == len(newTask.DBRPs) && !EqualAsSets(dbrps, newTask.DBRPs) {
-		// TODO: fix formatting & better message
-		httpd.HttpError(w,
-			fmt.Sprintf("dbrps must match. Tickscript: %v, Explicit: %v",
-				dbrps, newTask.DBRPs),
-			true, http.StatusBadRequest)
-		return
 	}
 
 	// Save task
@@ -926,8 +919,36 @@ func (ts *Service) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Set dbrps
-	if len(task.DBRPs) > 0 {
+	// TODO: Pull out this logic into a function
+	p, err := ast.Parse(updated.TICKscript)
+
+	// Technically this should never happen since we have previously validated the task
+	if err != nil {
+		httpd.HttpError(w, "invalid TICKscript: "+err.Error(), true, http.StatusBadRequest)
+		return
+	}
+
+	pn, ok := p.(*ast.ProgramNode)
+	// This should never happen
+	if !ok {
+		httpd.HttpError(w, "invalid TICKscript", true, http.StatusBadRequest)
+		return
+	}
+
+	if dbrps := pn.DBRPs(); len(dbrps) > 0 && len(task.DBRPs) > 0 {
+		// TODO: better error
+		httpd.HttpError(w, "cannot specify dbrp in both places", true, http.StatusBadRequest)
+		return
+	} else if len(dbrps) > 0 {
+		// make consistent
+		updated.DBRPs = []DBRP{}
+		for _, dbrp := range pn.DBRPs() {
+			updated.DBRPs = append(updated.DBRPs, DBRP{
+				Database:        dbrp.Database,
+				RetentionPolicy: dbrp.RetentionPolicy,
+			})
+		}
+	} else if len(task.DBRPs) > 0 {
 		updated.DBRPs = make([]DBRP, len(task.DBRPs))
 		for i, dbrp := range task.DBRPs {
 			updated.DBRPs[i] = DBRP{
@@ -968,6 +989,18 @@ func (ts *Service) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 	if statusChanged && updated.Status == Enabled {
 		updated.LastEnabled = now
 	}
+
+	// set task type from tickscript
+	switch tt := pn.TaskType(); tt {
+	case client.StreamTask:
+		updated.Type = StreamTask
+	case client.BatchTask:
+		updated.Type = BatchTask
+	default:
+		httpd.HttpError(w, fmt.Sprintf("invalid task type: %v", tt), true, http.StatusBadRequest)
+		return
+	}
+
 	if original.ID != updated.ID {
 		// Task ID changed delete and re-create.
 		if err := ts.tasks.Create(updated); err != nil {
