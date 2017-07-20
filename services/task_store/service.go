@@ -903,9 +903,27 @@ func (ts *Service) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 			updated.Type = BatchTask
 		}
 
+		oldPn, err := ast.NewProgramNodeFromTickscript(updated.TICKscript)
+		if err != nil {
+			httpd.HttpError(w, err.Error(), true, http.StatusBadRequest)
+			return
+		}
+
 		// Set tick script
 		if task.TICKscript != "" {
 			updated.TICKscript = task.TICKscript
+
+			newPn, err := ast.NewProgramNodeFromTickscript(updated.TICKscript)
+			if err != nil {
+				httpd.HttpError(w, err.Error(), true, http.StatusBadRequest)
+				return
+			}
+
+			if len(oldPn.DBRPs()) > 0 && len(newPn.DBRPs()) == 0 && len(task.DBRPs) == 0 {
+				// TODO: better messaging
+				httpd.HttpError(w, "must specify dbrp", true, http.StatusBadRequest)
+				return
+			}
 		}
 	}
 
