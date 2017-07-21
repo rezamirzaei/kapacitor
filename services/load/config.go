@@ -8,6 +8,7 @@ import (
 )
 
 const taskDir = "tasks"
+const templateDir = "templates"
 const handlerDir = "handlers"
 
 type Config struct {
@@ -46,6 +47,10 @@ func (c Config) Validate() error {
 		return fmt.Errorf("directory %s must be contain subdirectory %s", c.Dir, taskDir)
 	}
 
+	if !dirs[templateDir] {
+		return fmt.Errorf("directory %s must be contain subdirectory %s", c.Dir, templateDir)
+	}
+
 	if !dirs[handlerDir] {
 		return fmt.Errorf("directory %s must be contain subdirectory %s", c.Dir, handlerDir)
 	}
@@ -57,6 +62,10 @@ func (c Config) Validate() error {
 
 func (c Config) TasksDir() string {
 	return filepath.Join(c.Dir, taskDir)
+}
+
+func (c Config) TemplatesDir() string {
+	return filepath.Join(c.Dir, templateDir)
 }
 
 func (c Config) HandlersDir() string {

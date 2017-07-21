@@ -688,7 +688,7 @@ func doDefine(args []string) error {
 		}
 	}
 
-	fileVars := TaskVars{}
+	fileVars := client.TaskVars{}
 	if *dfile != "" {
 		f, err := os.Open(*dfile)
 		if err != nil {
@@ -733,6 +733,7 @@ func doDefine(args []string) error {
 				return err
 			}
 		}
+		fmt.Printf("%#v\n", o)
 		_, err = cli.CreateTask(o)
 	} else {
 		o := client.UpdateTaskOptions{
@@ -2286,49 +2287,4 @@ func doBackup(args []string) error {
 		return fmt.Errorf("failed to download entire backup, only wrote %d bytes out of a total %d bytes.", n, size)
 	}
 	return nil
-}
-
-type TaskVars struct {
-	ID         string      `json:"id,omitempty" yaml:"id"`
-	TemplateID string      `json:"template-id,omitempty" yaml:"template-id"`
-	DBRPs      []string    `json:"dbrps,omitempty" yaml:"dbrps"`
-	Vars       client.Vars `json:"vars,omitempty" yamls:"vars"`
-}
-
-func (t TaskVars) CreateTaskOptions() (client.CreateTaskOptions, error) {
-	ds := dbrps{}
-	o := client.CreateTaskOptions{
-		ID:         t.ID,
-		TemplateID: t.TemplateID,
-		Vars:       t.Vars,
-	}
-
-	for _, dbrp := range t.DBRPs {
-		if err := ds.Set(dbrp); err != nil {
-			return o, err
-		}
-	}
-
-	o.DBRPs = ds
-
-	return o, nil
-}
-
-func (t TaskVars) UpdateTaskOptions() (client.UpdateTaskOptions, error) {
-	ds := dbrps{}
-	o := client.UpdateTaskOptions{
-		ID:         t.ID,
-		TemplateID: t.TemplateID,
-		Vars:       t.Vars,
-	}
-
-	for _, dbrp := range t.DBRPs {
-		if err := ds.Set(dbrp); err != nil {
-			return o, err
-		}
-	}
-
-	o.DBRPs = ds
-
-	return o, nil
 }
