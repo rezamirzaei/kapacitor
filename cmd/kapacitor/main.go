@@ -864,7 +864,7 @@ func doDefineTemplate(args []string) error {
 }
 
 func defineTopicHandlerUsage() {
-	var u = `Usage: kapacitor define-topic-handler <topic id> <handler id> <path to handler spec file>
+	var u = `Usage: kapacitor define-topic-handler <path to handler spec file>
 
 	Create or update a handler.
 
@@ -874,7 +874,7 @@ For example:
 
 	Define a handler using the slack.yaml file:
 
-		$ kapacitor define-handler system my_handler slack.yaml
+		$ kapacitor define-topic-handler slack.yaml
 
 Options:
 `
@@ -882,14 +882,12 @@ Options:
 }
 
 func doDefineTopicHandler(args []string) error {
-	if len(args) != 3 {
-		fmt.Fprintln(os.Stderr, "Must provide a topic ID, a handler ID and a path to a handler file.")
+	if len(args) != 1 {
+		fmt.Fprintln(os.Stderr, "Must provide a path to a handler file.")
 		defineTopicHandlerUsage()
 		os.Exit(2)
 	}
-	topic := args[0]
-	handlerID := args[1]
-	p := args[2]
+	p := args[0]
 	f, err := os.Open(p)
 	if err != nil {
 		return errors.Wrapf(err, "failed to open handler spec file %q", p)
@@ -912,12 +910,11 @@ func doDefineTopicHandler(args []string) error {
 			return errors.Wrapf(err, "failed to unmarshal json handler file %q", p)
 		}
 	}
-	ho.ID = handlerID
 
-	l := cli.TopicHandlerLink(topic, ho.ID)
+	l := cli.TopicHandlerLink(ho.Topic, ho.ID)
 	handler, _ := cli.TopicHandler(l)
 	if handler.ID == "" {
-		_, err = cli.CreateTopicHandler(cli.TopicHandlersLink(topic), ho)
+		_, err = cli.CreateTopicHandler(cli.TopicHandlersLink(ho.Topic), ho)
 	} else {
 		_, err = cli.ReplaceTopicHandler(l, ho)
 	}

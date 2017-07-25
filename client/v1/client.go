@@ -1974,6 +1974,7 @@ func (c *Client) TopicHandler(link Link) (TopicHandler, error) {
 }
 
 type TopicHandlerOptions struct {
+	Topic   string                 `json:"topic" yaml:"topic"`
 	ID      string                 `json:"id" yaml:"id"`
 	Kind    string                 `json:"kind" yaml:"kind"`
 	Options map[string]interface{} `json:"options" yaml:"options"`
