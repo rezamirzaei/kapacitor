@@ -148,6 +148,11 @@ func (s *Service) Load() error {
 		return err
 	}
 
+	err = s.loadHandlers()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -321,5 +326,58 @@ func (s *Service) loadVars(f string) error {
 }
 
 func (s *Service) loadHandlers() error {
+	files, err := s.HandlerFiles()
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		if err := s.loadHandler(f); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Service) loadHandler(f string) error {
+	file, err := os.Open(f)
+	defer file.Close()
+	if err != nil {
+		return fmt.Errorf("failed to open file %v: %v", f, err)
+	}
+
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		return fmt.Errorf("failed to read file %v: %v", f, err)
+	}
+
+	var o client.TopicHandlerOptions
+	switch ext := path.Ext(f); ext {
+	case ".yaml", ".yml":
+		if err := yaml.Unmarshal(data, &o); err != nil {
+			return errors.Wrapf(err, "failed to unmarshal yaml task vars file %q", f)
+		}
+	case ".json":
+		if err := json.Unmarshal(data, &o); err != nil {
+			return errors.Wrapf(err, "failed to unmarshal json task vars file %q", f)
+		}
+	default:
+		return errors.New("bad file extension. Must be YAML or JSON")
+	}
+
+	l := s.cli.TopicHandlerLink(o.Topic, o.ID)
+	handler, _ := s.cli.TopicHandler(l)
+	if handler.ID == "" {
+		_, err := s.cli.CreateTopicHandler(s.cli.TopicHandlersLink(o.Topic), o)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err := s.cli.ReplaceTopicHandler(s.cli.TopicHandlersLink(o.Topic), o)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
