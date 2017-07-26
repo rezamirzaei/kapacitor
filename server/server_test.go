@@ -358,9 +358,9 @@ func TestServer_CreateTaskImplicit(t *testing.T) {
 			RetentionPolicy: "default",
 		},
 	}
-	tick := `dbrp mydb.myrp
+	tick := `dbrp "mydb"."myrp"
 
-dbrp otherdb.default
+dbrp "otherdb"."default"
 
 stream
     |from()
@@ -415,9 +415,9 @@ func TestServer_CreateTaskImplicitAndExplicit(t *testing.T) {
 			RetentionPolicy: "myrp",
 		},
 	}
-	tick := `dbrp mydb.myrp
+	tick := `dbrp "mydb"."myrp"
 
-dbrp otherdb.default
+dbrp "otherdb"."default"
 
 stream
     |from()
@@ -462,7 +462,7 @@ func TestServer_CreateTaskExplicitUpdateImplicit(t *testing.T) {
 			RetentionPolicy: "myrp",
 		},
 	}
-	updateTick := `dbrp mydb.myrp
+	updateTick := `dbrp "mydb"."myrp"
 
 stream
     |from()
@@ -1217,7 +1217,7 @@ func TestServer_CreateTemplateImplicitAndUpdateExplicitWithTasks(t *testing.T) {
 	defer s.Close()
 
 	id := "testTemplateID"
-	implicitTick := `dbrp telegraf.autogen
+	implicitTick := `dbrp "telegraf"."autogen"
 
 var x = 5
 
@@ -1304,9 +1304,9 @@ stream
 		t.Fatal(err)
 	}
 
-	finalTick := `dbrp telegraf.autogen
+	finalTick := `dbrp "telegraf"."autogen"
 
-	dbrp telegraf.not_autogen
+	dbrp "telegraf"."not_autogen"
 
 	var x = 5
 	

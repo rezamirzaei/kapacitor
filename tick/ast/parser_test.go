@@ -129,7 +129,7 @@ func TestParseStatements(t *testing.T) {
 	}{
 		// TODO: Allow use of " in dbrp declarations
 		{
-			script: `dbrp telegraf.autogen`,
+			script: `dbrp "telegraf"."autogen"`,
 			Root: &ProgramNode{
 				position: position{
 					pos:  0,
@@ -143,21 +143,21 @@ func TestParseStatements(t *testing.T) {
 							line: 1,
 							char: 1,
 						},
-						DB: &IdentifierNode{
+						DB: &ReferenceNode{
 							position: position{
 								pos:  5,
 								line: 1,
 								char: 6,
 							},
-							Ident: "telegraf",
+							Reference: "telegraf",
 						},
-						RP: &IdentifierNode{
+						RP: &ReferenceNode{
 							position: position{
-								pos:  14,
+								pos:  16,
 								line: 1,
-								char: 15,
+								char: 17,
 							},
-							Ident: "autogen",
+							Reference: "autogen",
 						},
 					},
 				},

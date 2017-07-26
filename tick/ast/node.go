@@ -365,11 +365,11 @@ func (n *BinaryNode) Equal(o interface{}) bool {
 type DBRPNode struct {
 	position
 	Comment *CommentNode
-	DB      *IdentifierNode
-	RP      *IdentifierNode
+	DB      *ReferenceNode
+	RP      *ReferenceNode
 }
 
-func newDBRP(p position, db, rp *IdentifierNode, c *CommentNode) *DBRPNode {
+func newDBRP(p position, db, rp *ReferenceNode, c *CommentNode) *DBRPNode {
 	return &DBRPNode{
 		position: p,
 		DB:       db,
@@ -380,7 +380,7 @@ func newDBRP(p position, db, rp *IdentifierNode, c *CommentNode) *DBRPNode {
 
 // TODO: Use Better typing eventually
 func (d *DBRPNode) DBRP() string {
-	return d.DB.Ident + "." + d.RP.Ident
+	return "\"" + d.DB.Reference + "\"" + "." + "\"" + d.RP.Reference + "\""
 }
 
 func (d *DBRPNode) Equal(o interface{}) bool {
@@ -398,9 +398,7 @@ func (s *DBRPNode) Format(buf *bytes.Buffer, indent string, onNewLine bool) {
 	buf.WriteString(indent)
 	buf.WriteString(TokenDBRP.String())
 	buf.WriteByte(' ')
-	buf.WriteString(s.DB.Ident)
-	buf.WriteString(TokenDot.String())
-	buf.WriteString(s.RP.Ident)
+	buf.WriteString(s.DBRP())
 }
 
 func (n *DBRPNode) String() string {
@@ -1051,8 +1049,8 @@ func (n *ProgramNode) DBRPs() []client.DBRP {
 		case *DBRPNode:
 			dbrpn := nn.(*DBRPNode)
 			dbrpc := client.DBRP{
-				Database:        dbrpn.DB.Ident,
-				RetentionPolicy: dbrpn.RP.Ident,
+				Database:        dbrpn.DB.Reference,
+				RetentionPolicy: dbrpn.RP.Reference,
 			}
 			dbrps = append(dbrps, dbrpc)
 		default:

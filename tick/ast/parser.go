@@ -248,11 +248,11 @@ func (p *parser) statement() Node {
 func (p *parser) dbrp() Node {
 	dbrpTok := p.expect(TokenDBRP)
 	dbrpC := p.consumeComment()
-	db := p.identifier()
+	db := p.reference()
 	_ = p.expect(TokenDot)
-	rp := p.identifier()
+	rp := p.reference()
 
-	return newDBRP(p.position(dbrpTok.pos), db, rp, dbrpC)
+	return newDBRP(p.position(dbrpTok.pos), db.(*ReferenceNode), rp.(*ReferenceNode), dbrpC)
 }
 
 //parse a declaration statement
