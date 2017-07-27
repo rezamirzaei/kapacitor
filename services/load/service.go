@@ -201,11 +201,21 @@ func (s *Service) loadTickscript(f string) error {
 		o := client.UpdateTaskOptions{
 			ID:         id,
 			TICKscript: script,
-			Status:     client.Enabled,
 		}
 		if _, err := s.cli.UpdateTask(l, o); err != nil {
 			return fmt.Errorf("failed to create task: %v", err)
 		}
+
+		// do reload
+		_, err := s.cli.UpdateTask(l, client.UpdateTaskOptions{Status: client.Disabled})
+		if err != nil {
+			return err
+		}
+		_, err = s.cli.UpdateTask(l, client.UpdateTaskOptions{Status: client.Enabled})
+		if err != nil {
+			return err
+		}
+
 	}
 	return nil
 }
@@ -317,9 +327,17 @@ func (s *Service) loadVars(f string) error {
 		}
 
 		o.ID = id
-		o.Status = client.Enabled
 		if _, err := s.cli.UpdateTask(l, o); err != nil {
 			return fmt.Errorf("failed to create task: %v", err)
+		}
+		// do reload
+		_, err = s.cli.UpdateTask(l, client.UpdateTaskOptions{Status: client.Disabled})
+		if err != nil {
+			return err
+		}
+		_, err = s.cli.UpdateTask(l, client.UpdateTaskOptions{Status: client.Enabled})
+		if err != nil {
+			return err
 		}
 	}
 	return nil

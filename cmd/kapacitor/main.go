@@ -733,7 +733,6 @@ func doDefine(args []string) error {
 				return err
 			}
 		}
-		fmt.Printf("%#v\n", o)
 		_, err = cli.CreateTask(o)
 	} else {
 		o := client.UpdateTaskOptions{
