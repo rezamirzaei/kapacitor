@@ -391,7 +391,7 @@ func (s *Service) loadHandler(f string) error {
 			return err
 		}
 	} else {
-		_, err := s.cli.ReplaceTopicHandler(s.cli.TopicHandlersLink(o.Topic), o)
+		_, err := s.cli.ReplaceTopicHandler(l, o)
 		if err != nil {
 			return err
 		}
