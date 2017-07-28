@@ -138,6 +138,9 @@ func (s *Service) HandlerFiles() ([]string, error) {
 }
 
 func (s *Service) Load() error {
+	if !s.config.Enabled {
+		return nil
+	}
 	err := s.loadTickscripts()
 	if err != nil {
 		return err

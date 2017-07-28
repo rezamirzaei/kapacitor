@@ -89,15 +89,31 @@ func (m *Main) Run(args ...string) error {
 
 		signalCh := make(chan os.Signal, 1)
 		signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+		reloadSignal := make(chan os.Signal, 1)
+		signal.Notify(reloadSignal, os.Interrupt, syscall.SIGHUP)
 		m.Logger.Println("I! Listening for signals")
 
 		// Block until one of the signals above is received
-		select {
-		case <-signalCh:
-			m.Logger.Println("I! Signal received, initializing clean shutdown...")
-			go func() {
-				cmd.Close()
-			}()
+	Loop:
+		for {
+			select {
+			case <-signalCh:
+				m.Logger.Println("I! Signal received, initializing clean shutdown...")
+				go func() {
+					cmd.Close()
+				}()
+				break Loop
+			case <-reloadSignal:
+				m.Logger.Println("I! SIGHUP received, Reloading tasks/templates/directory directory...")
+				if err := cmd.Server.LoadService.Load(); err != nil {
+					// TODO: should this be a sufficient condition to shutdown the server?
+					m.Logger.Println(fmt.Sprintf("E! Failed to reload tasks/templates/handlers: %s", err))
+					go func() {
+						cmd.Close()
+					}()
+					break Loop
+				}
+			}
 		}
 
 		// Block again until another signal is received, a shutdown timeout elapses,

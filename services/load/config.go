@@ -16,6 +16,13 @@ type Config struct {
 	Dir     string `toml:"dir"`
 }
 
+func NewConfig() Config {
+	return Config{
+		Enabled: false,
+		Dir:     "/etc/kapacitor/load", // TODO: better default
+	}
+}
+
 // Validates verifies that the directory specified is an absolute path
 // and that it contains the directories /tasks and /handlers. The directory
 // may contain additional files, but must at least contain /tasks and /handlers.

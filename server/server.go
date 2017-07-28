@@ -36,6 +36,7 @@ import (
 	"github.com/influxdata/kapacitor/services/httppost"
 	"github.com/influxdata/kapacitor/services/influxdb"
 	"github.com/influxdata/kapacitor/services/k8s"
+	"github.com/influxdata/kapacitor/services/load"
 	"github.com/influxdata/kapacitor/services/logging"
 	"github.com/influxdata/kapacitor/services/marathon"
 	"github.com/influxdata/kapacitor/services/nerve"
@@ -96,6 +97,7 @@ type Server struct {
 	TaskMaster       *kapacitor.TaskMaster
 	TaskMasterLookup *kapacitor.TaskMasterLookup
 
+	LoadService           *load.Service
 	AuthService           auth.Interface
 	HTTPDService          *httpd.Service
 	StorageService        *storage.Service
@@ -202,6 +204,10 @@ func New(c *Config, buildInfo BuildInfo, logService logging.Interface) (*Server,
 		return nil, errors.Wrap(err, "influxdb service")
 	}
 
+	if err := s.setLoadService(); err != nil {
+		return nil, errors.Wrap(err, "load service")
+	}
+
 	// Append Alert integration services
 	s.appendAlertaService()
 	s.appendHipChatService()
@@ -296,6 +302,8 @@ func (s *Server) appendStorageService() {
 
 	s.StorageService = srv
 	s.AppendService("storage", srv)
+
+	return
 }
 
 func (s *Server) appendConfigOverrideService() {
@@ -343,6 +351,19 @@ func (s *Server) appendSMTPService() {
 
 	s.SetDynamicService("smtp", srv)
 	s.AppendService("smtp", srv)
+}
+
+func (s *Server) setLoadService() error {
+	c := s.config.Load
+	l := s.LogService.NewLogger("[load] ", log.LstdFlags)
+	srv, err := load.NewService(c, l)
+	if err != nil {
+		return err
+	}
+
+	s.LoadService = srv
+
+	return nil
 }
 
 func (s *Server) appendInfluxDBService() error {
