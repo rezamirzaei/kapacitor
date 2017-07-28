@@ -207,5 +207,5 @@ func (c *httpClient) UpdateService(service *swarm.Service) error {
 	}
 	defer resp.Body.Close()
 
-	return c.decodeResponse(resp, nil, http.StatusCreated)
+	return c.decodeResponse(resp, nil, http.StatusOK)
 }
