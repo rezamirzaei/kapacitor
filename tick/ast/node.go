@@ -1098,6 +1098,10 @@ func (n *ProgramNode) TaskType() client.TaskType {
 		}
 	}
 
+	if len(tts) == 0 {
+		return client.InvalidTask
+	}
+
 	t := tts[0]
 	for _, tt := range tts[1:] {
 		if t != tt {
