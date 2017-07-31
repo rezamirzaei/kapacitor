@@ -244,7 +244,7 @@ func (p *parser) statement() Node {
 	}
 }
 
-//parse a declaration statement
+//parse a dbrp statement
 func (p *parser) dbrp() Node {
 	dbrpTok := p.expect(TokenDBRP)
 	dbrpC := p.consumeComment()
