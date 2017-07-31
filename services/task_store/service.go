@@ -716,9 +716,6 @@ func (ts *Service) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 			newTask.Type = StreamTask
 		case client.BatchTask:
 			newTask.Type = BatchTask
-			//default:
-			//	httpd.HttpError(w, fmt.Sprintf("unknown type %q", task.Type), true, http.StatusBadRequest)
-			//	return
 		}
 
 		// Set tick script
@@ -794,16 +791,13 @@ func (ts *Service) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// TODO: clean up logic here
 	if len(dbrps) == 0 && len(newTask.DBRPs) == 0 {
-		// TODO:better error
 		httpd.HttpError(w, "must specify dbrp", true, http.StatusBadRequest)
 		return
 	}
 
 	if len(dbrps) > 0 && len(newTask.DBRPs) > 0 {
-		// TODO: better error
-		httpd.HttpError(w, "cannot specify dbrp in both places", true, http.StatusBadRequest)
+		httpd.HttpError(w, "cannot specify dbrp in both implicitly and explicitly", true, http.StatusBadRequest)
 		return
 	}
 
@@ -920,7 +914,6 @@ func (ts *Service) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if len(oldPn.DBRPs()) > 0 && len(newPn.DBRPs()) == 0 && len(task.DBRPs) == 0 {
-				// TODO: better messaging
 				httpd.HttpError(w, "must specify dbrp", true, http.StatusBadRequest)
 				return
 			}
@@ -934,8 +927,7 @@ func (ts *Service) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if dbrps := pn.DBRPs(); len(dbrps) > 0 && len(task.DBRPs) > 0 {
-		// TODO: better error
-		httpd.HttpError(w, "cannot specify dbrp in both places", true, http.StatusBadRequest)
+		httpd.HttpError(w, "cannot specify dbrp in implicitly and explicitly", true, http.StatusBadRequest)
 		return
 	} else if len(dbrps) > 0 {
 		// make consistent
@@ -1808,126 +1800,17 @@ func (ts *Service) handleUpdateTemplate(w http.ResponseWriter, r *http.Request) 
 	w.Write(httpd.MarshalJSON(t, true))
 }
 
-// NEW
-//func (ts *Service) updateAllAssociatedTasks(old, new Template, taskIds []string) error {
-//	var i int
-//	errs := []error{}
-//
-//	// Setup rollback function
-//	defer func() {
-//		if i == len(taskIds) && len(errs) == 0 {
-//			// All tasks updated no need to rollback
-//			return
-//		}
-//		//Rollback in case of an error
-//		for j := 0; j <= i; j++ {
-//			taskId := taskIds[j]
-//			task, err := ts.tasks.Get(taskId)
-//			if err != nil {
-//				if err != ErrNoTaskExists {
-//					ts.logger.Printf("E! error rolling back associated task %s: %s", taskId, err)
-//				}
-//				continue
-//			}
-//			task.TemplateID = old.ID
-//			task.TICKscript = old.TICKscript
-//			task.Type = old.Type
-//			if err := ts.tasks.Replace(task); err != nil {
-//				ts.logger.Printf("E! error rolling back associated task %s: %s", taskId, err)
-//			}
-//			if task.Status == Enabled {
-//				ts.stopTask(taskId)
-//				err := ts.startTask(task)
-//				if err != nil {
-//					ts.logger.Printf("E! error rolling back associated task %s: %s", taskId, err)
-//				}
-//			}
-//		}
-//	}()
-//
-//	oldPn, err := ast.NewProgramNodeFromTickscript(old.TICKscript)
-//	if err != nil {
-//		// TODO: better error
-//		return fmt.Errorf("failed to parse old tickscript: %v", err)
-//	}
-//
-//	newPn, err := ast.NewProgramNodeFromTickscript(new.TICKscript)
-//	if err != nil {
-//		// TODO: better error
-//		return fmt.Errorf("failed to parse new tickscript: %v", err)
-//	}
-//
-//	for ; i < len(taskIds); i++ {
-//		taskId := taskIds[i]
-//		task, err := ts.tasks.Get(taskId)
-//		if err == ErrNoTaskExists {
-//			ts.templates.DisassociateTask(old.ID, taskId)
-//			continue
-//		}
-//		if err != nil {
-//			errs = append(errs, fmt.Errorf("error retrieving associated task %s: %s", taskId, err))
-//			continue
-//		}
-//		if old.ID != new.ID {
-//			// Update association
-//			if err := ts.templates.AssociateTask(new.ID, taskId); err != nil {
-//				errs = append(errs, fmt.Errorf("error updating task association %s: %s", taskId, err))
-//				continue
-//			}
-//		}
-//
-//		task.TemplateID = new.ID
-//		task.TICKscript = new.TICKscript
-//		task.Type = new.Type
-//
-//		if len(oldPn.DBRPs()) > 0 || len(newPn.DBRPs()) > 0 {
-//			//if len(oldPn.DBRPs()) > 0 && len(newPn.DBRPs()) == 0 {
-//
-//			task.DBRPs = []DBRP{}
-//			for _, dbrp := range newPn.DBRPs() {
-//				task.DBRPs = append(task.DBRPs, DBRP{
-//					Database:        dbrp.Database,
-//					RetentionPolicy: dbrp.RetentionPolicy,
-//				})
-//
-//			}
-//		}
-//
-//		if err := ts.tasks.Replace(task); err != nil {
-//			errs = append(errs, fmt.Errorf("error updating associated task %s: %s", taskId, err))
-//			continue
-//			//return fmt.Errorf("error updating associated task %s: %s", taskId, err)
-//		}
-//		if task.Status == Enabled {
-//			ts.stopTask(taskId)
-//			err := ts.startTask(task)
-//			if err != nil {
-//				errs = append(errs, fmt.Errorf("error reloading associated task %s: %s", taskId, err))
-//				//return fmt.Errorf("error reloading associated task %s: %s", taskId, err)
-//			}
-//		}
-//	}
-//
-//	if len(errs) > 0 {
-//		return fmt.Errorf("encountered the following errors attempting to update: %v", errs)
-//	}
-//
-//	return nil
-//}
-
 // Update all associated tasks. Return the first error if any.
 // Rollsback all updated tasks if an error occurs.
 func (ts *Service) updateAllAssociatedTasks(old, new Template, taskIds []string) error {
 	var i int
 	oldPn, err := ast.NewProgramNodeFromTickscript(old.TICKscript)
 	if err != nil {
-		// TODO: better error
 		return fmt.Errorf("failed to parse old tickscript: %v", err)
 	}
 
 	newPn, err := ast.NewProgramNodeFromTickscript(new.TICKscript)
 	if err != nil {
-		// TODO: better error
 		return fmt.Errorf("failed to parse new tickscript: %v", err)
 	}
 
