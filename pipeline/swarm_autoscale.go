@@ -77,6 +77,7 @@ type SwarmAutoscaleNode struct {
 	// ServiceName is the name of a tag which contains the name of the docker swarm service to autoscale.
 	ServiceNameTag string
 	// OutputServiceName is the name of a tag into which the service name will be written for output autoscale events.
+	// Defaults to the value of ServiceNameTag if its not empty.
 	OutputServiceNameTag string
 
 	// CurrentField is the name of a field into which the current replica count will be set as an int.

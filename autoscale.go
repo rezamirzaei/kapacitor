@@ -453,9 +453,9 @@ func (a *k8sAutoscaler) SetResourceIDOnTags(id ResourceID, tags models.Tags) {
 type swarmAutoscaler struct {
 	client swarm.Client
 
-	serviceName       string
-	serviceNameTag    string
-	outServiceNameTag string
+	serviceName          string
+	serviceNameTag       string
+	outputServiceNameTag string
 }
 
 func newSwarmAutoscaleNode(et *ExecutingTask, n *pipeline.SwarmAutoscaleNode, l *log.Logger) (*AutoscaleNode, error) {
@@ -463,11 +463,15 @@ func newSwarmAutoscaleNode(et *ExecutingTask, n *pipeline.SwarmAutoscaleNode, l 
 	if err != nil {
 		return nil, fmt.Errorf("cannot use the swarmAutoscale node, could not create swarm client: %v", err)
 	}
+	outputServiceNameTag := n.OutputServiceNameTag
+	if outputServiceNameTag == "" {
+		outputServiceNameTag = n.ServiceNameTag
+	}
 	a := &swarmAutoscaler{
-		client:            client,
-		serviceName:       n.ServiceName,
-		serviceNameTag:    n.ServiceNameTag,
-		outServiceNameTag: n.OutputServiceNameTag,
+		client:               client,
+		serviceName:          n.ServiceName,
+		serviceNameTag:       n.ServiceNameTag,
+		outputServiceNameTag: outputServiceNameTag,
 	}
 	return newAutoscaleNode(
 		et,
@@ -531,7 +535,7 @@ func (a *swarmAutoscaler) SetReplicas(id ResourceID, replicas int) error {
 }
 
 func (a *swarmAutoscaler) SetResourceIDOnTags(id ResourceID, tags models.Tags) {
-	if a.outServiceNameTag != "" {
-		tags[a.outServiceNameTag] = id.ID()
+	if a.outputServiceNameTag != "" {
+		tags[a.outputServiceNameTag] = id.ID()
 	}
 }
