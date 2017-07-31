@@ -45,11 +45,11 @@ func NewService(c Config, l *log.Logger) (*Service, error) {
 
 // TaskFiles gets a slice of all files with the .tick file extension
 // in the configured task directory.
-func (s *Service) TaskFiles() (tickscripts []string, err error) {
+func (s *Service) taskFiles() (tickscripts []string, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	tasksDir := s.config.TasksDir()
+	tasksDir := s.config.tasksDir()
 
 	files, err := ioutil.ReadDir(tasksDir)
 	if err != nil {
@@ -76,11 +76,11 @@ func (s *Service) TaskFiles() (tickscripts []string, err error) {
 // TemplateFiles gets a slice of all files with the .tick file extension
 // and any associated files with .json, .yml, and .yaml file extentions
 // in the configured template directory.
-func (s *Service) TemplateFiles() (tickscripts []string, tmplVars []string, err error) {
+func (s *Service) templateFiles() (tickscripts []string, tmplVars []string, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	templatesDir := s.config.TemplatesDir()
+	templatesDir := s.config.templatesDir()
 
 	files, err := ioutil.ReadDir(templatesDir)
 	if err != nil {
@@ -108,12 +108,12 @@ func (s *Service) TemplateFiles() (tickscripts []string, tmplVars []string, err 
 
 // HandlerFiles gets a slice of all files with the .json, .yml, and
 // .yaml file extentions in the configured handler directory.
-func (s *Service) HandlerFiles() ([]string, error) {
+func (s *Service) handlerFiles() ([]string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	handlers := []string{}
 
-	handlersDir := s.config.HandlersDir()
+	handlersDir := s.config.handlersDir()
 
 	files, err := ioutil.ReadDir(handlersDir)
 	if err != nil {
@@ -141,7 +141,7 @@ func (s *Service) Load() error {
 	if !s.config.Enabled {
 		return nil
 	}
-	err := s.loadTickscripts()
+	err := s.loadTasks()
 	if err != nil {
 		return err
 	}
@@ -159,14 +159,14 @@ func (s *Service) Load() error {
 	return nil
 }
 
-func (s *Service) loadTickscripts() error {
-	files, err := s.TaskFiles()
+func (s *Service) loadTasks() error {
+	files, err := s.taskFiles()
 	if err != nil {
 		return fmt.Errorf("failed to load tickscripts: %v", err)
 	}
 
 	for _, f := range files {
-		if err := s.loadTickscript(f); err != nil {
+		if err := s.loadTask(f); err != nil {
 			return err
 		}
 	}
@@ -174,8 +174,9 @@ func (s *Service) loadTickscripts() error {
 	return nil
 }
 
-func (s *Service) loadTickscript(f string) error {
+func (s *Service) loadTask(f string) error {
 	file, err := os.Open(f)
+	defer file.Close()
 	if err != nil {
 		return fmt.Errorf("failed to open file %v: %v", f, err)
 	}
@@ -186,7 +187,8 @@ func (s *Service) loadTickscript(f string) error {
 	}
 
 	script := string(data)
-	id := strings.TrimSuffix(filepath.Base(file.Name()), ".tick")
+	fn := file.Name()
+	id := strings.TrimSuffix(filepath.Base(fn), filepath.Ext(fn))
 
 	l := s.cli.TaskLink(id)
 	task, _ := s.cli.Task(l, nil)
@@ -224,7 +226,7 @@ func (s *Service) loadTickscript(f string) error {
 }
 
 func (s *Service) loadTemplates() error {
-	files, vars, err := s.TemplateFiles()
+	files, vars, err := s.templateFiles()
 	if err != nil {
 		return err
 	}
@@ -245,6 +247,7 @@ func (s *Service) loadTemplates() error {
 
 func (s *Service) loadTemplate(f string) error {
 	file, err := os.Open(f)
+	defer file.Close()
 	if err != nil {
 		return fmt.Errorf("failed to open file %v: %v", f, err)
 	}
@@ -255,7 +258,8 @@ func (s *Service) loadTemplate(f string) error {
 	}
 
 	script := string(data)
-	id := strings.TrimSuffix(filepath.Base(file.Name()), ".tick")
+	fn := file.Name()
+	id := strings.TrimSuffix(filepath.Base(fn), filepath.Ext(fn))
 
 	l := s.cli.TemplateLink(id)
 	task, _ := s.cli.Template(l, nil)
@@ -292,7 +296,9 @@ func (s *Service) loadVars(f string) error {
 		return fmt.Errorf("failed to read file %v: %v", f, err)
 	}
 
-	id := strings.TrimSuffix(filepath.Base(file.Name()), filepath.Ext(file.Name()))
+	fn := file.Name()
+	id := strings.TrimSuffix(filepath.Base(fn), filepath.Ext(fn))
+
 	fileVars := client.TaskVars{}
 	switch ext := path.Ext(f); ext {
 	case ".yaml", ".yml":
@@ -305,7 +311,6 @@ func (s *Service) loadVars(f string) error {
 		}
 	default:
 		return errors.New("bad file extension. Must be YAML or JSON")
-
 	}
 
 	l := s.cli.TaskLink(id)
@@ -347,7 +352,7 @@ func (s *Service) loadVars(f string) error {
 }
 
 func (s *Service) loadHandlers() error {
-	files, err := s.HandlerFiles()
+	files, err := s.handlerFiles()
 	if err != nil {
 		return err
 	}

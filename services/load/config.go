@@ -67,14 +67,14 @@ func (c Config) Validate() error {
 	return nil
 }
 
-func (c Config) TasksDir() string {
+func (c Config) tasksDir() string {
 	return filepath.Join(c.Dir, taskDir)
 }
 
-func (c Config) TemplatesDir() string {
+func (c Config) templatesDir() string {
 	return filepath.Join(c.Dir, templateDir)
 }
 
-func (c Config) HandlersDir() string {
+func (c Config) handlersDir() string {
 	return filepath.Join(c.Dir, handlerDir)
 }
