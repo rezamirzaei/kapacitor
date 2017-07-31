@@ -1060,7 +1060,6 @@ func (n *ProgramNode) DBRPs() []client.DBRP {
 	return dbrps
 }
 
-// TODO: add tests
 // TODO: Not sure how I feel about client.TaskType importing from client
 func (n *ProgramNode) TaskType() client.TaskType {
 	tts := []string{}
