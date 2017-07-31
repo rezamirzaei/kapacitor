@@ -141,16 +141,19 @@ func (s *Service) Load() error {
 	if !s.config.Enabled {
 		return nil
 	}
+	s.logger.Println("D! Loading tasks")
 	err := s.loadTasks()
 	if err != nil {
 		return err
 	}
 
+	s.logger.Println("D! Loading templates")
 	err = s.loadTemplates()
 	if err != nil {
 		return err
 	}
 
+	s.logger.Println("D! Loading handlers")
 	err = s.loadHandlers()
 	if err != nil {
 		return err
@@ -166,6 +169,7 @@ func (s *Service) loadTasks() error {
 	}
 
 	for _, f := range files {
+		s.logger.Println("D! Loading task from file: ", f)
 		if err := s.loadTask(f); err != nil {
 			return err
 		}
@@ -232,12 +236,14 @@ func (s *Service) loadTemplates() error {
 	}
 
 	for _, f := range files {
+		s.logger.Println("D! Loading template from file: ", f)
 		if err := s.loadTemplate(f); err != nil {
 			return err
 		}
 	}
 
 	for _, v := range vars {
+		s.logger.Println("D! Loading task vars from file: ", v)
 		if err := s.loadVars(v); err != nil {
 			return err
 		}
@@ -358,6 +364,7 @@ func (s *Service) loadHandlers() error {
 	}
 
 	for _, f := range files {
+		s.logger.Println("D! Loading handler from file: ", f)
 		if err := s.loadHandler(f); err != nil {
 			return err
 		}

@@ -204,10 +204,9 @@ type ExecutionStats struct {
 type TaskType int
 
 const (
-	UndefinedTask TaskType = 0
-	InvalidTask   TaskType = 1
-	StreamTask    TaskType = 2
-	BatchTask     TaskType = 3
+	InvalidTask TaskType = 0
+	StreamTask  TaskType = 1
+	BatchTask   TaskType = 2
 )
 
 func (tt TaskType) MarshalText() ([]byte, error) {
@@ -216,8 +215,6 @@ func (tt TaskType) MarshalText() ([]byte, error) {
 		return []byte("stream"), nil
 	case BatchTask:
 		return []byte("batch"), nil
-	case UndefinedTask:
-		return []byte("undefined"), nil
 	case InvalidTask:
 		return []byte("invalid"), nil
 	default:
@@ -231,8 +228,6 @@ func (tt *TaskType) UnmarshalText(text []byte) error {
 		*tt = StreamTask
 	case "batch":
 		*tt = BatchTask
-	case "undefined":
-		*tt = UndefinedTask
 	case "invalid":
 		*tt = InvalidTask
 	default:

@@ -110,7 +110,6 @@ const (
 	KW_True   = "TRUE"
 	KW_False  = "FALSE"
 	KW_Var    = "var"
-	KW_Set    = "set"
 	KW_DBRP   = "dbrp"
 	KW_Lambda = "lambda"
 )

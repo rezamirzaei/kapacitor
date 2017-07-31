@@ -127,7 +127,6 @@ func TestParseStatements(t *testing.T) {
 		Root   Node
 		err    error
 	}{
-		// TODO: Allow use of " in dbrp declarations
 		{
 			script: `dbrp "telegraf"."autogen"`,
 			Root: &ProgramNode{

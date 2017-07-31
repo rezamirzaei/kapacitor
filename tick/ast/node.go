@@ -378,7 +378,6 @@ func newDBRP(p position, db, rp *ReferenceNode, c *CommentNode) *DBRPNode {
 	}
 }
 
-// TODO: Use Better typing eventually
 func (d *DBRPNode) DBRP() string {
 	return "\"" + d.DB.Reference + "\"" + "." + "\"" + d.RP.Reference + "\""
 }
@@ -1061,7 +1060,6 @@ func (n *ProgramNode) DBRPs() []client.DBRP {
 	return dbrps
 }
 
-// TODO: better type here
 // TODO: add tests
 // TODO: Not sure how I feel about client.TaskType importing from client
 func (n *ProgramNode) TaskType() client.TaskType {
@@ -1070,9 +1068,8 @@ func (n *ProgramNode) TaskType() client.TaskType {
 		switch nn.(type) {
 		case *DeclarationNode:
 			if cn, ok := nn.(*DeclarationNode).Right.(*ChainNode); ok {
-				// TODO: dont repeat logic
 				var n = cn.Left
-			Loop1:
+			DeclLoop:
 				for {
 					switch n.(type) {
 					case *ChainNode:
@@ -1081,13 +1078,13 @@ func (n *ProgramNode) TaskType() client.TaskType {
 						if ident := n.(*IdentifierNode).Ident; ident == "batch" || ident == "stream" {
 							tts = append(tts, ident)
 						}
-						break Loop1
+						break DeclLoop
 					}
 				}
 			}
 		case *ChainNode:
 			var n = nn.(*ChainNode).Left
-		Loop2:
+		ChainLoop:
 			for {
 				switch n.(type) {
 				case *ChainNode:
@@ -1096,7 +1093,7 @@ func (n *ProgramNode) TaskType() client.TaskType {
 					if ident := n.(*IdentifierNode).Ident; ident == "batch" || ident == "stream" {
 						tts = append(tts, ident)
 					}
-					break Loop2
+					break ChainLoop
 				}
 			}
 		}
