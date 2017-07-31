@@ -2296,15 +2296,15 @@ func (d *Duration) UnmarshalText(data []byte) error {
 }
 
 // TODO: this is also used in kapacitor/main.go
-type dbrps []DBRP
+type DBRPs []DBRP
 
-func (d *dbrps) String() string {
+func (d *DBRPs) String() string {
 	return fmt.Sprint(*d)
 }
 
 // Parse string of the form "db"."rp" where the quotes are optional but can include escaped quotes
 // within the strings.
-func (d *dbrps) Set(value string) error {
+func (d *DBRPs) Set(value string) error {
 	dbrp := DBRP{}
 	if len(value) == 0 {
 		return errors.New("dbrp cannot be empty")
@@ -2362,7 +2362,7 @@ type TaskVars struct {
 }
 
 func (t TaskVars) CreateTaskOptions() (CreateTaskOptions, error) {
-	ds := dbrps{}
+	ds := DBRPs{}
 	o := CreateTaskOptions{
 		ID:         t.ID,
 		TemplateID: t.TemplateID,
@@ -2381,7 +2381,7 @@ func (t TaskVars) CreateTaskOptions() (CreateTaskOptions, error) {
 }
 
 func (t TaskVars) UpdateTaskOptions() (UpdateTaskOptions, error) {
-	ds := dbrps{}
+	ds := DBRPs{}
 	o := UpdateTaskOptions{
 		ID:         t.ID,
 		TemplateID: t.TemplateID,
